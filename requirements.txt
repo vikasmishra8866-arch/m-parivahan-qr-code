@@ -1,4 +1,1 @@
-streamlit
-qrcode[pil]
-pytesseract
-pillow
+qrcode
