@@ -2,17 +2,20 @@ import streamlit as st
 import qrcode
 from io import BytesIO
 from PIL import Image
-import pytesseract  # Photo se text nikalne ke liye
+import pytesseract
 import re
+
+# Streamlit Cloud par Tesseract ka rasta (Path)
+pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
 st.set_page_config(page_title="Compact Vehicle QR", layout="centered")
 
 st.title("🚗 Compact Vehicle QR Generator")
 
-# --- Naya Browse Photo Option ---
+# --- Browse Photo Option ---
 uploaded_file = st.file_uploader("Browse Photo (Virtual RC)", type=["jpg", "jpeg", "png"])
 
-# Default values agar photo upload na ho
+# Default values
 v_no_val = ""
 reg_date_val = ""
 owner_val = ""
@@ -20,18 +23,27 @@ chassis_val = ""
 engine_val = ""
 
 if uploaded_file is not None:
-    img_ocr = Image.open(uploaded_file)
-    text = pytesseract.image_to_string(img_ocr)
-    
-    # Simple logic photo se data dhoondhne ke liye
     try:
-        v_no_val = re.findall(r'[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}', text)[0]
-        reg_date_val = re.findall(r'\d{2}-[A-Za-z]{3}-\d{4}', text)[0]
-    except:
-        pass
+        img_ocr = Image.open(uploaded_file)
+        # Photo se text nikalne ki koshish
+        text = pytesseract.image_to_string(img_ocr)
+        
+        # Regex se data match karna (Aapki photo ke hisaab se)
+        v_no_match = re.search(r'[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}', text)
+        if v_no_match: v_no_val = v_no_match.group()
+        
+        # Owner name aksar 'Name' ke baad hota hai
+        owner_match = re.search(r'Name\s+([A-Z\s]+)', text)
+        if owner_match: owner_val = owner_match.group(1).strip()
+
+        # Chassis number match
+        chassis_match = re.search(r'Chassis No\.\s+([A-Z0-9]+)', text)
+        if chassis_match: chassis_val = chassis_match.group(1).strip()
+    except Exception as e:
+        st.warning("Photo scan karne mein thodi dikkat hui, aap manual bhi bhar sakte hain.")
 
 with st.form("vehicle_form"):
-    # Ab ye boxes automatic fill ho jayenge agar photo upload ki hai
+    # Boxes automatic fill ho jayenge agar photo upload ki hai
     v_no = st.text_input("Vehicle Number", value=v_no_val, placeholder="GJ05BY9222")
     reg_date = st.text_input("Registration Date", value=reg_date_val, placeholder="16/07/2025")
     owner = st.text_input("Owner Name", value=owner_val, placeholder="AGARWAL ENTERPRISE")
