@@ -2,17 +2,41 @@ import streamlit as st
 import qrcode
 from io import BytesIO
 from PIL import Image
+import pytesseract  # Photo se text nikalne ke liye
+import re
 
 st.set_page_config(page_title="Compact Vehicle QR", layout="centered")
 
 st.title("🚗 Compact Vehicle QR Generator")
 
+# --- Naya Browse Photo Option ---
+uploaded_file = st.file_uploader("Browse Photo (Virtual RC)", type=["jpg", "jpeg", "png"])
+
+# Default values agar photo upload na ho
+v_no_val = ""
+reg_date_val = ""
+owner_val = ""
+chassis_val = ""
+engine_val = ""
+
+if uploaded_file is not None:
+    img_ocr = Image.open(uploaded_file)
+    text = pytesseract.image_to_string(img_ocr)
+    
+    # Simple logic photo se data dhoondhne ke liye
+    try:
+        v_no_val = re.findall(r'[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}', text)[0]
+        reg_date_val = re.findall(r'\d{2}-[A-Za-z]{3}-\d{4}', text)[0]
+    except:
+        pass
+
 with st.form("vehicle_form"):
-    v_no = st.text_input("Vehicle Number", placeholder="GJ05BY9222")
-    reg_date = st.text_input("Registration Date", placeholder="16/07/2025")
-    owner = st.text_input("Owner Name", placeholder="AGARWAL ENTERPRISE")
-    chassis = st.text_input("Chassis Number", placeholder="MA3ERXXXXXXXX")
-    engine = st.text_input("Engine Number", placeholder="E374XXXXX")
+    # Ab ye boxes automatic fill ho jayenge agar photo upload ki hai
+    v_no = st.text_input("Vehicle Number", value=v_no_val, placeholder="GJ05BY9222")
+    reg_date = st.text_input("Registration Date", value=reg_date_val, placeholder="16/07/2025")
+    owner = st.text_input("Owner Name", value=owner_val, placeholder="AGARWAL ENTERPRISE")
+    chassis = st.text_input("Chassis Number", value=chassis_val, placeholder="MA3ERXXXXXXXX")
+    engine = st.text_input("Engine Number", value=engine_val, placeholder="E374XXXXX")
     
     submit = st.form_submit_button("Generate Compact QR")
 
@@ -28,17 +52,15 @@ if submit:
 ---------------------------
 🔗 More Info: https://parivahan.gov.in/"""
 
-        # --- Yahan changes kiye hain ---
         qr = qrcode.QRCode(
             version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_M, # Accuracy badhayi
-            box_size=8,  # Lines ko aur paas lane ke liye size kam kiya
-            border=0,    # 0 matlab saara extra white space khatam
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=8,  
+            border=0,    
         )
         qr.add_data(qr_data)
         qr.make(fit=True)
 
-        # QR ko clean black aur white mein convert karna
         img = qr.make_image(fill_color="black", back_color="white")
         
         buf = BytesIO()
@@ -47,7 +69,6 @@ if submit:
 
         st.success("✅ Compact QR Taiyar Hai!")
         
-        # Displaying with no extra padding
         st.image(byte_im, caption="Scan karein (No Borders)", width=250)
 
         st.download_button(
