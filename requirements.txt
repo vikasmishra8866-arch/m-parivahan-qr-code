@@ -1,1 +1,4 @@
 qrcode
+streamlit
+qrcode[pil]
+pytesseract
